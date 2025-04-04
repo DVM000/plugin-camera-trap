@@ -1,0 +1,13 @@
+name: "camera-trap"
+version: "0.1.0"
+description: "Captures images, run CNN to identify animal and publishes animal detections"
+keywords: "animal monitoring"
+authors: "Delia Velasco-Montero <deliaimse-cnm.csic.es>"
+collaborators: ""
+funding: ""
+license: ""
+homepage: ""
+source:
+  architectures:
+    - "linux/amd64"
+    - "linux/arm64"
