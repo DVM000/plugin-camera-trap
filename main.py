@@ -108,8 +108,8 @@ def main(args):
     with Plugin() as plugin:
         for c,detections in modelObj.detections.items(): # tuple (image_path,confidence) indexed by class-idx
             for det in detections:
-                plugin.publish(f'env.detection.animal', float(det[1]))#, timestamp=int(os.path.getmtime(det[0])*1e9), meta=meta) #timestamp=det[0].timestamp
-                plugin.upload_file(det[0], meta=meta)
+                plugin.publish(f'env.detection.animal', float(det[1]), timestamp=int(os.path.getmtime(det[0])*1e9), meta=meta) #timestamp=det[0].timestamp
+                plugin.upload_file(det[0], timestamp=int(os.path.getmtime(det[0])*1e9), meta=meta)
 	
     shutil.rmtree(FRAMES_FOLDER)
     return 0
