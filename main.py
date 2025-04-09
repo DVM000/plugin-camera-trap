@@ -29,7 +29,7 @@ def capture_stream(plugin, stream, fps, nframes, out_dir=""):
     os.makedirs(out_dir, exist_ok=True)
     
     # use case 2
-    with Camera() as camera:
+    with Camera(stream) as camera:
         i=0
         for sample in camera.stream():
             # Save image
@@ -90,28 +90,34 @@ def main(args):
     # ------------------------------------------------------------------
     # Main loop
     # ------------------------------------------------------------------
-    
-    # 1- Capture frames
-    with Plugin() as plugin:
-            capture_stream(plugin, args.stream, FPS, NFRAMES, FRAMES_FOLDER)
-            #capture(plugin, args.stream, FPS, NFRAMES, FRAMES_FOLDER)
+    run_once = False
+    while args.loop or not run_once:
+        # 1- Capture frames
+        with Plugin() as plugin:
+                capture_stream(plugin, args.stream, FPS, NFRAMES, FRAMES_FOLDER)
+                #capture(plugin, args.stream, FPS, NFRAMES, FRAMES_FOLDER)
                      
-    # 2- CNN classification
-    dt_s = datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
-    modelObj.B_execute_inference(FRAMES_FOLDER, classes, 1000, target_classes = TARGET_LABELS)
-    result_classes = modelObj.result_vector
-    print(result_classes)
+        # 2- CNN classification
+        dt_s = datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
+        modelObj.B_execute_inference(FRAMES_FOLDER, classes, 1000, target_classes = TARGET_LABELS)
+        result_classes = modelObj.result_vector
+        print(result_classes)
 
+        # 3- Publish detections 
+        meta = {"camera":  f"{args.stream}"}
+        with Plugin() as plugin:
+            for c,detections in modelObj.detections.items(): # tuple (image_path,confidence) indexed by class-idx
+                for det in detections:
+                    plugin.publish(f'env.detection.animal', float(det[1]), timestamp=int(os.path.getmtime(det[0])*1e9), meta=meta) #timestamp=det[0].timestamp
+                    plugin.upload_file(det[0], timestamp=int(os.path.getmtime(det[0])*1e9), meta=meta)
+        run_once = True
+
+        shutil.rmtree(FRAMES_FOLDER)
+           
+        if args.loop:
+            logging.info(f'{args.stream} sleeping for {IMG_PERIOD} seconds')     
+            time.sleep(IMG_PERIOD) # adjust
     
-    # 3- Publish detections 
-    meta = {"camera":  f"{args.stream}"}
-    with Plugin() as plugin:
-        for c,detections in modelObj.detections.items(): # tuple (image_path,confidence) indexed by class-idx
-            for det in detections:
-                plugin.publish(f'env.detection.animal', float(det[1]), timestamp=int(os.path.getmtime(det[0])*1e9), meta=meta) #timestamp=det[0].timestamp
-                plugin.upload_file(det[0], timestamp=int(os.path.getmtime(det[0])*1e9), meta=meta)
-	
-    shutil.rmtree(FRAMES_FOLDER)
     return 0
 
 
@@ -127,8 +133,9 @@ if __name__ == '__main__':
         help='Number of frames to capture')
     parser.add_argument(
         '--stream', dest='stream',
-        help='ID or name of a stream', default='node-cam')
-
+        help='ID or name of a stream', default='bottom_camera')
+    parser.add_argument('--loop', action='store_true', 
+        help='Keep running into a loop forever')
        
     args = parser.parse_args()
     exit(main(args))

@@ -9,3 +9,5 @@ TARGET_LABELS = [0]  # categories of interest. In this case, category 0: Animal
 # Burst of images    
 FPS = 25
 
+IMG_PERIOD = 15
+
